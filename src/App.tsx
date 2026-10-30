@@ -19,6 +19,8 @@ import LedPage from "./pages/LedPage";
 import BookLedPage from "./pages/BookLedPage";
 import LedV1Page from "./pages/LedV1Page";
 import BookLedV1Page from "./pages/BookLedV1Page";
+import LedV2Page from "./pages/LedV2Page";
+import BookLedV2Page from "./pages/BookLedV2Page";
 
 
 
@@ -38,6 +40,8 @@ const App = () => (
           <Route path="/bookled" element={<BookLedPage />} />
           <Route path="/ledv1" element={<LedV1Page />} />
           <Route path="/bookledv1" element={<BookLedV1Page />} />
+          <Route path="/ledv2" element={<LedV2Page />} />
+          <Route path="/bookledv2" element={<BookLedV2Page />} />
 
 
           {/* Body Cavitation (EMS) */}
