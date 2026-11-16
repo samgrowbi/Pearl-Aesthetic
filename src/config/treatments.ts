@@ -295,7 +295,7 @@ export const BODY_SCULPTING_TREATMENT: TreatmentConfig = {
     "https://customer-vgdtdepv6dn1f10z.cloudflarestream.com/542c31111170319f17c101be4f11a218/manifest/video.m3u8",
   price: "79.99",
   originalPrice: "599.99",
-  appointmentTypeId: "89277707",
+  appointmentTypeId: "100563073",
   calendarId: "13553882",
   duration: 60,
   image: treatmentImage,
