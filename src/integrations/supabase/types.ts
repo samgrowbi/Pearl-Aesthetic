@@ -145,6 +145,21 @@ export type Database = {
         }
         Relationships: []
       }
+      meta_sent_purchases: {
+        Row: {
+          appointment_id: string
+          sent_at: string
+        }
+        Insert: {
+          appointment_id: string
+          sent_at?: string
+        }
+        Update: {
+          appointment_id?: string
+          sent_at?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
