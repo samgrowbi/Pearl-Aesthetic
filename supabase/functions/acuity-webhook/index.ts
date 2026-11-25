@@ -1,3 +1,5 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
@@ -5,6 +7,11 @@ const corsHeaders = {
 
 const META_PIXEL_ID = "1379598507258437";
 const META_API_VERSION = "v20.0";
+
+const supabase = createClient(
+  Deno.env.get("SUPABASE_URL")!,
+  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+);
 
 async function hashData(data: string): Promise<string> {
   if (!data) return "";
@@ -92,7 +99,8 @@ async function sendToMeta(eventData: {
         event_name: "Purchase",
         event_time: eventTime,
         action_source: "system_generated",
-        event_id: `acuity_checkin_${eventData.appointmentId}_${eventTime}`,
+        // Stable ID per appointment so Meta can deduplicate repeat sends
+        event_id: `acuity_checkin_${eventData.appointmentId}`,
         user_data: userData,
         custom_data: {
           appointment_id: eventData.appointmentId,
@@ -199,6 +207,27 @@ Deno.serve(async (req) => {
         && !isCanceled && !isNoShow;
 
       if (hasArrivedLabel) {
+        // Claim this appointment first. Acuity fires "changed" for every later edit,
+        // so without this guard the same check-in was sent to Meta again and again.
+        const { error: claimError } = await supabase
+          .from("meta_sent_purchases")
+          .insert({ appointment_id: String(appointmentId) });
+
+        if (claimError) {
+          if (claimError.code === "23505") {
+            console.log(`Purchase already sent for appointment ${appointmentId}, skipping`);
+            return new Response(
+              JSON.stringify({ message: "Purchase already sent for this appointment", processed: false }),
+              { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+            );
+          }
+          console.error("Could not record sent purchase:", claimError);
+          return new Response(
+            JSON.stringify({ message: "Could not record sent purchase", error: claimError.message }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+          );
+        }
+
         console.log("Appointment marked as Checked In / Arrived, sending Purchase event to Meta...");
 
         const result = await sendToMeta({
@@ -209,6 +238,11 @@ Deno.serve(async (req) => {
           appointmentId: String(appointmentId),
           price: appointment.price || appointment.priceSold,
         });
+
+        if (!result.success) {
+          // Release the claim so the next webhook can retry
+          await supabase.from("meta_sent_purchases").delete().eq("appointment_id", String(appointmentId));
+        }
 
         return new Response(
           JSON.stringify({ message: "Checked In - Purchase event sent to Meta", metaResult: result }),
